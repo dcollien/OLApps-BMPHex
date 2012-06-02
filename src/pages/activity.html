@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>BMP Hex Editor</title>
+		<link rel="stylesheet" href="/common/bootstrap/css/bootstrap.min.css" type="text/css" media="screen" charset="utf-8">
+		
+		<script src="/common/jquery.min.js"></script>
+		<script src="/app.js"></script>
+		<script type="text/javascript" charset="utf-8" src="{{ media('hexEditor.js') }}"></script>
+		
+		<style type="text/css" media="screen">
+			.faded {
+				/* IE 8 */
+				-ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)";
+
+				/* IE 5-7 */
+				filter: alpha(opacity=50);
+
+				/* Netscape */
+				-moz-opacity: 0.5;
+
+				/* Safari 1.x */
+				-khtml-opacity: 0.5;
+
+				/* Good browsers */
+				opacity: 0.5;
+			}
+		
+			.headerInput {
+				width: 20px;
+			}
+			
+			.pixelInput {
+				width: 20px;
+			}
+			
+			.highlighted {
+				background-color: #ff8 !important;
+				color: #000 !important;
+				border-radius: 3px;
+			}
+			
+			.hexConst {
+				display: inline-block;
+				width: 20px;
+				padding: 4px;
+				margin: 1px;
+			}
+			
+			.bmpHeaderByte {
+				color: #00b;
+			}
+			
+			.dibHeaderByte {
+				color: #080;
+			}
+			
+			.pixelByte {
+				color: #800;
+			}
+			
+			.displayByte {
+				display: inline-block;
+				width: 16px;
+				margin-left: 1px;
+				padding-left: 2px;
+				margin-right: 1px;
+				padding-right: 1px;				
+			}
+			
+			#header {
+				background: -moz-linear-gradient(top,  rgba(255,255,255,1) 0%, rgba(255,255,255,1) 95%, rgba(255,255,255,0) 100%); /* FF3.6+ */
+				background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,255,255,1)), color-stop(95%,rgba(255,255,255,1)), color-stop(100%,rgba(255,255,255,0))); /* Chrome,Safari4+ */
+				background: -webkit-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(255,255,255,1) 95%,rgba(255,255,255,0) 100%); /* Chrome10+,Safari5.1+ */
+				background: -o-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(255,255,255,1) 95%,rgba(255,255,255,0) 100%); /* Opera 11.10+ */
+				background: -ms-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(255,255,255,1) 95%,rgba(255,255,255,0) 100%); /* IE10+ */
+				background: linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(255,255,255,1) 95%,rgba(255,255,255,0) 100%); /* W3C */
+				filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#00ffffff',GradientType=0 ); /* IE6-9 */
+
+			}
+			
+		</style>
+		
+		<script type="text/javascript" charset="utf-8">
+			$(document).ready( function( ) {
+				// init with 3x3 image
+				var bmpHexEditor = new BMPHexEditor( 3, 3 );
+				window.app.resize( 970, 600 );
+			} );
+		</script>
+	</head>
+		
+	<body>
+		<div id="header" style="position: fixed; width: 100%; z-index: 9999">
+			<center>
+				<div id="dropZone" style="border: 1px dashed #ccc; display: inline-block; padding: 5px; background-color: #fcfcfc;">
+					<div style="float: left; padding-top: 20px">
+						<canvas id="bitmapCanvas" style="border: 1px solid #aaa"></canvas>
+					</div>
+					<div style="width: 700px; padding-left: 180px; text-align: left">
+						File bytes in hexadecimal:
+						<span style="float:right">
+							Legend:
+							<span style="font-family: monospace;" class="bmpHeaderByte">BMP Header</span>,
+							<span style="font-family: monospace;" class="dibHeaderByte">DIB Header</span>,
+							<span style="font-family: monospace;" class="pixelByte">Pixel Array</span>
+						</span>
+						<pre id="fileView" style="font-family: monospace; text-align: left"></pre>
+					</div>
+					<br/>
+					<span style="color: #08c"><i class="icon-arrow-down faded"></i> Drop Image Here</span> or <a href="" onclick="$('#selectImage').fadeToggle(); return false;"><i class="icon-picture faded"></i> Select Image File</a></span><br/><input type="file" id="selectImage" style="display:none; border: 1px solid #ccc; padding: 4px; background-color: #eee"></span>
+				</div>
+			</center>
+			<br/>
+			
+			<br/>
+			
+			<ul class="nav nav-tabs">
+				<li class="active"><a href="#bmpHeader" data-toggle="tab">BMP Header</a></li>
+				<li><a href="#dibHeader" data-toggle="tab">DIB Header</a></li>
+				<li><a href="#pixelArray" data-toggle="tab">Pixel Array</a></li>
+			</ul>
+		
+		</div>
+		<div id="content" class="tab-content">
+			<div class="tab-pane active" id="bmpHeader">
+				<p>
+					<b>Start of File</b>
+				</p>
+				<table border="0" cellspacing="0" cellpadding="0" class="table table-striped">
+					<tr>
+						<th>Offset</th>
+						<th>Size</th>
+						<th>Hex Value
+							<sub>
+								<br/>
+								(Bold values change according to size)
+							</sub>
+						</th>
+						<th>Value</th>
+						<th>Description</th>
+					</tr>
+					<tr>
+						<td>0x00</td>
+						<td>2</td>
+						<td>
+							<span class="hexConst" id="byte0">42</span>
+							<span class="hexConst" id="byte1">4D</span>
+						</td>
+						<td>"BM"</td>
+						<td>Format ID</td>
+					</tr>
+					<tr>
+						<td>0x02</td>
+						<td>4</td>
+						<td style="font-weight: bold">
+							<span class="hexConst" id="byte2">46</span>
+							<span class="hexConst" id="byte3">00</span>
+							<span class="hexConst" id="byte4">00</span>
+							<span class="hexConst" id="byte5">00</span>
+						</td>
+						<td>
+							<span id="fileSize">XX</span> Bytes
+						</td>
+						<td>
+							Size of the BMP file
+						</td>
+					</tr>
+					<tr>
+						<td>0x06</td>
+						<td>4</td>
+						<td>
+							<span class="hexConst" id="byte6">00</span>
+							<span class="hexConst" id="byte7">00</span>
+							<span class="hexConst" id="byte8">00</span>
+							<span class="hexConst" id="byte9">00</span>
+						</td>
+						<td>Unused</td>
+						<td>Application Specific</td>
+					</tr>
+					<tr>
+						<td>0x0A</td>
+						<td>4</td>
+						<td>
+							<span class="hexConst" id="byte10">36</span>
+							<span class="hexConst" id="byte11">00</span>
+							<span class="hexConst" id="byte12">00</span>
+							<span class="hexConst" id="byte13">00</span>
+						</td>
+						<td>54 Bytes</td>
+						<td>Position in the file where the pixel data starts</td>
+					</tr>
+				</table>
+				<p>
+					<b>DIB header follows</b>
+				</p>
+			</div>
+			<div class="tab-pane" id="dibHeader">
+				<p>
+					<b>Following on from BMP header</b>
+				</p>
+				<table border="0" cellspacing="0" cellpadding="0" class="table table-striped">
+					<tr>
+						<th>Offset</th>
+						<th>Size</th>
+						<th>Hex Value
+							<sub>
+								<br/>
+								(Bold values change according to size)
+							</sub>
+						</th>
+						<th>Value</th>
+						<th>Description</th>
+					</tr>
+					<tr>
+						<td>0x0E</td>
+						<td>4</td>
+						<td>
+							<span class="hexConst" id="byte14">28</span>
+							<span class="hexConst" id="byte15">00</span>
+							<span class="hexConst" id="byte16">00</span>
+							<span class="hexConst" id="byte17">00</span>
+						</td>
+						<td>40 Bytes</td>
+						<td>Size of DIB header</td>
+					</tr>
+					<tr>
+						<td>0x12</td>
+						<td>4</td>
+						<td>
+							<input maxlength="2" type="text" class="headerInput" id="byte18" value="03">
+							<input maxlength="2" type="text" class="headerInput" id="byte19" value="00">
+							<input maxlength="2" type="text" class="headerInput" id="byte20"value="00">
+							<input maxlength="2" type="text" class="headerInput" id="byte21"value="00">
+						</td>
+						<td>
+							<span id="imageWidth">XX</span> Pixels
+						</td>
+						<td>
+							Image width (in pixels)
+							<sub><br>Changing this field will reset the image</sub>
+						</td>
+					</tr>
+					<tr>
+						<td>0x16</td>
+						<td>4</td>
+						<td>
+							<input maxlength="2" type="text" class="headerInput" id="byte22" value="03">
+							<input maxlength="2" type="text" class="headerInput" id="byte23" value="00">
+							<input maxlength="2" type="text" class="headerInput" id="byte24" value="00">
+							<input maxlength="2" type="text" class="headerInput" id="byte25" value="00">
+						</td>
+						<td>
+							<span id="imageHeight">XX</span> Pixels
+						</td>
+						<td>
+							Image height (in pixels)
+							<sub><br>Changing this field will reset the image</sub>
+						</td>
+					</tr>
+					<tr>
+						<td>0x1A</td>
+						<td>2</td>
+						<td>
+							<span class="hexConst" id="byte26">01</span>
+							<span class="hexConst" id="byte27">00</span>
+						</td>
+						<td>1 Plane</td>
+						<td>Number of color planes used in the image</td>
+					</tr>
+					<tr>
+						<td>0x1C</td>
+						<td>2</td>
+						<td>
+							<span class="hexConst" id="byte28">18</span>
+							<span class="hexConst" id="byte29">00</span>
+						</td>
+						<td>24 bits</td>
+						<td>Number of bits per pixel (3 &times; 8-bit colors)</td>
+					</tr>
+					<tr>
+						<td>0x1E</td>
+						<td>4</td>
+						<td>
+							<span class="hexConst" id="byte30">00</span>
+							<span class="hexConst" id="byte31">00</span>
+							<span class="hexConst" id="byte32">00</span>
+							<span class="hexConst" id="byte33">00</span>
+						</td>
+						<td>0</td>
+						<td>Compression used (none)</td>
+					</tr>
+					<tr>
+						<td>0x22</td>
+						<td>4</td>
+						<td style="font-weight: bold">
+							<span class="hexConst" id="byte34">10</span>
+							<span class="hexConst" id="byte35">00</span>
+							<span class="hexConst" id="byte36">00</span>
+							<span class="hexConst" id="byte37">00</span>
+						</td>
+						<td>
+							<span id="pixelArraySize">XX</span> Bytes
+						</td>
+						<td>
+							Size of the pixel array data (including padding)
+						</td>
+					</tr>
+					<tr>
+						<td>0x26</td>
+						<td>4</td>
+						<td>
+							<span class="hexConst" id="byte38">13</span>
+							<span class="hexConst" id="byte39">0B</span>
+							<span class="hexConst" id="byte40">00</span>
+							<span class="hexConst" id="byte41">00</span>
+						</td>
+						<td>2835 pixels/meter</td>
+						<td>Horizontal Resolution</td>
+					</tr>
+					<tr>
+						<td>0x2A</td>
+						<td>4</td>
+						<td>
+							<span class="hexConst" id="byte42">13</span>
+							<span class="hexConst" id="byte43">0B</span>
+							<span class="hexConst" id="byte44">00</span>
+							<span class="hexConst" id="byte45">00</span>
+						</td>
+						<td>2835 pixels/meter</td>
+						<td>Vertical Resolution</td>
+					</tr>	
+					<tr>
+						<td>0x2E</td>
+						<td>4</td>
+						<td>
+							<span class="hexConst" id="byte46">00</span> 
+							<span class="hexConst" id="byte47">00</span>
+							<span class="hexConst" id="byte48">00</span>
+							<span class="hexConst" id="byte49">00</span>
+						</td>
+						<td>0 (Unused)</td>
+						<td>Number of colors in the palette</td>
+					</tr>
+					<tr>
+						<td>0x32</td>
+						<td>4</td>
+						<td><span class="hexConst" id="byte50">00</span>
+							<span class="hexConst" id="byte51">00</span>
+							<span class="hexConst" id="byte52">00</span>
+							<span class="hexConst" id="byte53">00</span>
+						</td>
+						<td>0 (All colors are important)</td>
+						<td>Number of important colors</td>
+					</tr>		
+				</table>
+				<p>
+					<b>Pixel array follows</b>
+				</p>
+			</div>
+			<div class="tab-pane" id="pixelArray">
+				<p>
+					<b>Following on from DIB header</b>
+				</p>
+				
+				<div id="pixelArrayData" style="display: inline-block">Loading...</div>
+				
+				<p>
+					<b>End of File</b>
+				</p>
+			</div>
+		</div>
+		
+	</body>
+</html>
