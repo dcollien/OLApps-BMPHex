@@ -181,10 +181,12 @@ BMPHexEditor = (function() {
   };
 
   BMPHexEditor.prototype.resize = function() {
-    return $('#content').css({
-      'position': 'relative',
-      'top': ($('#header').height() + 20) + 'px'
-    });
+    /*
+    		$('#content').css {
+    			'position': 'relative'
+    			'top': ($('#header').height( ) + 20) + 'px'
+    		}
+    */
   };
 
   BMPHexEditor.prototype.encodeDataURI = function(input) {

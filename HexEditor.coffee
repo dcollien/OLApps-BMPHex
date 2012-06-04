@@ -165,10 +165,12 @@ class BMPHexEditor
 		return @unlockedAchievements[achievement]
 
 	resize: ->
+		###
 		$('#content').css {
 			'position': 'relative'
 			'top': ($('#header').height( ) + 20) + 'px'
 		}
+		###
 	
 	encodeDataURI: (input) ->
 		keyString = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
