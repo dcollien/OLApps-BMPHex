@@ -41,6 +41,11 @@
 				border-radius: 3px;
 			}
 			
+			.listedAchievement {
+				margin-left: 5px;
+				font-size: 12px;
+			}
+			
 			.hexConst {
 				display: inline-block;
 				width: 20px;
@@ -48,21 +53,39 @@
 				margin: 1px;
 			}
 			
-			.bmpHeaderByte {
+			
+			.bmpHeaderByteUnlocked {
 				color: #00b;
 			}
 			
-			.dibHeaderByte {
+			.dibHeaderByteUnlocked {
 				color: #080;
+			}
+			
+			.bmpHeaderByte {
+				text-decoration: none;
+			}
+			
+			.dibHeaderByte {
+				text-decoration: none;
 			}
 			
 			.pixelByte {
 				color: #800;
+				text-decoration: none;
 			}
 			
 			.displayByte {
+				font-size: 12px;
 				display: inline-block;
 				width: 16px;
+				margin: 0;
+				padding: 0;
+				border: none !important;
+				text-align: center !important;
+				vertical-align: middle !important;
+				font-family: monospace;
+				line-height: 18px;
 				margin-left: 1px;
 				padding-left: 2px;
 				margin-right: 1px;
@@ -92,24 +115,41 @@
 	</head>
 		
 	<body>
-		<div id="header" style="position: fixed; width: 100%; z-index: 9999">
+		<div id="header" style="position: fixed; width: 100%; z-index: 998">			
+			<ul class="nav nav-pills hide" style="position: absolute; right: 15px;" id="achievementDropdown">
+				<li class="dropdown" id="achievementMenu">
+					<a class="dropdown-toggle" data-toggle="dropdown" href="#achievementMenu">
+						Achievements <span class="badge badge-success"><span id="numUnlocked">0</span><!--/<span id="totalAchievements">10</span>--></span>
+						<b class="caret"></b>
+					</a>
+					<ul class="dropdown-menu" id="achievementList">
+						<li><a href="?" id="resetAchievements">Reset Activity</a></li>
+						<li class="divider"></li>
+					</ul>
+				</li>
+			</ul>
+			
 			<center>
+				<div id="achievementSpace" style="height: 60px; z-index: 9999; cursor: pointer">
+				</div>
+				
 				<div id="dropZone" style="border: 1px dashed #ccc; display: inline-block; padding: 5px; background-color: #fcfcfc;">
 					<div style="float: left; padding-top: 20px">
+						Bitmap Preview:<br/>
 						<canvas id="bitmapCanvas" style="border: 1px solid #aaa"></canvas>
 					</div>
 					<div style="width: 700px; padding-left: 180px; text-align: left">
 						File bytes in hexadecimal:
 						<span style="float:right">
 							Legend:
-							<span style="font-family: monospace;" class="bmpHeaderByte">BMP Header</span>,
-							<span style="font-family: monospace;" class="dibHeaderByte">DIB Header</span>,
-							<span style="font-family: monospace;" class="pixelByte">Pixel Array</span>
+							<a href="#" style="font-family: monospace;" id="bmpHeaderUnlock" class="bmpHeaderByte">BMP Header</a>,
+							<span style="font-family: monospace;" id="dibHeaderUnlock" class="dibHeaderByte">DIB Header</span>,
+							<span style="font-family: monospace;" id="pixelArrayUnlock" class="pixelByte">Pixel Array</span>
 						</span>
 						<pre id="fileView" style="font-family: monospace; text-align: left"></pre>
 					</div>
 					<br/>
-					<span style="color: #08c"><i class="icon-arrow-down faded"></i> Drop Image Here</span> or <a href="" onclick="$('#selectImage').fadeToggle(); return false;"><i class="icon-picture faded"></i> Select Image File</a><br/><input type="file" id="selectImage" style="display:none; border: 1px solid #ccc; padding: 4px; background-color: #eee">
+					<span style="color: #888"><i class="icon-edit faded"></i> Edit the bytes, <i class="icon-arrow-down faded"></i> Drop an image here or </span><a href="" onclick="$('#selectImage').fadeToggle(); return false;"><i class="icon-picture faded"></i> Select an image file</a><br/><div style="height: 35px"><input type="file" id="selectImage" style="display:none; border: 1px solid #ccc; padding: 4px; background-color: #eee"></div>
 				</div>
 			</center>
 			<br/>
@@ -117,13 +157,13 @@
 			<br/>
 			
 			<ul class="nav nav-tabs">
-				<li class="active"><a href="#bmpHeader" data-toggle="tab">BMP Header</a></li>
-				<li><a href="#dibHeader" data-toggle="tab">DIB Header</a></li>
-				<li><a href="#pixelArray" data-toggle="tab">Pixel Array</a></li>
+				<li id="bmpHeaderTab" class="active hide"><a href="#bmpHeader" data-toggle="tab">BMP Header</a></li>
+				<li id="dibHeaderTab" class="hide"><a href="#dibHeader" data-toggle="tab">DIB Header</a></li>
+				<li id="pixelArrayTab" class="hide"><a href="#pixelArray" data-toggle="tab">Pixel Array</a></li>
 			</ul>
 		
 		</div>
-		<div id="content" class="tab-content">
+		<div id="content" class="tab-content hide" style="padding-left: 1ex">
 			<div class="tab-pane active" id="bmpHeader">
 				<p>
 					<b>Start of File</b>
@@ -196,7 +236,7 @@
 					<b>DIB header follows</b>
 				</p>
 			</div>
-			<div class="tab-pane" id="dibHeader">
+			<div class="tab-pane hide" id="dibHeader">
 				<p>
 					<b>Following on from BMP header</b>
 				</p>
@@ -359,7 +399,7 @@
 					<b>Pixel array follows</b>
 				</p>
 			</div>
-			<div class="tab-pane" id="pixelArray">
+			<div class="tab-pane hide" id="pixelArray">
 				<p>
 					<b>Following on from DIB header</b>
 				</p>
