@@ -11,9 +11,15 @@ class BMPHexEditor
 	
 	@MAX_SIZE = 150
 	
-	@ACHIEVEMENT_INIT_ORDER = [ 'Show Pixel Array', 'Show DIB Header', 'Show BMP Header', 'Edited Padding Bytes' ]
+	@ACHIEVEMENT_INIT_ORDER = [ 'Instructions', 'Show Pixel Array', 'Show DIB Header', 'Show BMP Header', 'Edited Padding Bytes' ]
 	
 	@ACHIEVEMENTS = {
+		'Instructions': {
+			title: 'Your Mission',
+			description: '<br>(1) Click the BMP Header.<br> (2) Find the bytes that change the image\'s dimensions.<br> (3) Change pixel colours.<br>',
+			action: ->
+		},
+
 		'Mondrian': {
 			title: 'Piet Mondrian',
 			description: 'A true masterpiece!',
@@ -21,18 +27,19 @@ class BMPHexEditor
 		},
 		
 		'Show BMP Header': {		
-			title: 'Clicked on something!'
-			description: '\'BMP Header\' Tab is now available',
+			title: 'BMP Header Shown'
+			description: '\'BMP Header\' is shown in a tab below.',
 			action: ->
 				$('#bmpHeaderTab').fadeIn( )
 				$('#content').fadeIn( )
 				$('#bmpHeaderTab a').tab('show')
 				$('.bmpHeaderByte').addClass( 'bmpHeaderByteUnlocked' )
+				$('#bmpHeaderUnlock').css('text-decoration', 'none')
 				@resize( )
 		},
 		
 		'Show DIB Header': {
-			title: 'Messing with sizes'
+			title: 'Messing with dimensions'
 			description: '\'DIB Header\' Tab is now available',
 			action: ->
 				$('#dibHeaderTab').fadeIn( )
@@ -59,7 +66,7 @@ class BMPHexEditor
 		}
 	}
 	
-	constructor: (@width, @height, @unlockedAchievements) ->
+	constructor: (@width, @height, @unlockedAchievements, pixels) ->
 		@canvas = $('#bitmapCanvas')[0]
 		@ctx = @canvas.getContext '2d'
 		
@@ -76,6 +83,8 @@ class BMPHexEditor
 		@selectedX = 0
 		@selectedY = 0
 		@isSelected = false
+
+		@base64Data = null;
 		
 		if @unlockedAchievements
 			for name in BMPHexEditor.ACHIEVEMENT_INIT_ORDER
@@ -83,11 +92,11 @@ class BMPHexEditor
 					@unlockAchievement name, true
 		else
 			@unlockedAchievements = {}
-		console.log @unlockedAchievements
+		#console.log @unlockedAchievements
 		
 		$('#totalAchievements').text BMPHexEditor.ACHIEVEMENT_INIT_ORDER.length
 		
-		@resetImage( )
+		@resetImage( pixels, width, height )
 		
 		# reset image on changing header inputs
 		$('.headerInput').bind 'change', => @headerByteChanged( )
@@ -108,12 +117,20 @@ class BMPHexEditor
 		$('#bmpHeaderUnlock').click => 
 			@unlockAchievement 'Show BMP Header'
 			return false
-	
-	unlockAchievement: (achievement, isSilent=false) ->
+
+		$('#bmpHeaderUnlock').tooltip();
+		
+		if window.app
+			window.app.ready => @unlockAchievement 'Instructions', false, false
+		else
+			@unlockAchievement 'Instructions', false, false
+
+	unlockAchievement: (achievement, isSilent=false, timeout=8000) ->
 		if @unlockedAchievements[achievement] is true
 			return
 		
-		$('#achievementDropdown').fadeIn( )
+		if not window.app
+			$('#achievementDropdown').fadeIn( )
 		
 		@unlockedAchievements[achievement] = true
 		achievementData = BMPHexEditor.ACHIEVEMENTS[achievement]
@@ -137,34 +154,42 @@ class BMPHexEditor
 		$newItem.append $('<i class="icon-ok faded">')
 		$newItem.append ' '
 		$newItem.append $title
+		$newItem.popover
+			title: achievementData.title
+			content: achievementData.description
+			trigger: 'hover'
+
 		$('#achievementList').append $newItem
 		
-		if !isSilent
+		if !isSilent and !window.app
 			$('#achievementSpace').empty( )
 			
 			$achievementAlert = $('<div class="alert alert-success hide">')
-			$achievementAlert.append $('<strong>Achievement Unlocked:</strong>')
-			$achievementAlert.append ' &nbsp; '
-			$achievementAlert.append achievementData.title
+			#$achievementAlert.append $('<strong>Achievement Unlocked:</strong>')
+			#$achievementAlert.append ' &nbsp; '
+			$achievementAlert.append $('<strong>').text(achievementData.title)
 			$achievementAlert.append $('<br>')
-			$achievementAlert.append achievementData.description
-			$achievementAlert.append $('<span style="position: absolute; left: 20px; top: 20px;">Click to Close</span>')
+			$achievementAlert.append achievementData.description.replace(/<br>/g, ' ')
+			$achievementAlert.append $('<span style="position: absolute; right: 20px; top: 20px;">Click to Close</span>')
 			$achievementAlert.alert( )
 			
 			$achievementAlert.click -> $(this).fadeOut( )
 			
-			setTimeout (-> $achievementAlert.fadeOut( )), 8000
+			if timeout
+				setTimeout (-> $achievementAlert.fadeOut( )), timeout
 			
 			$('#achievementSpace').append $achievementAlert
 			$achievementAlert.slideDown( )
+		else if !isSilent
+			window.app.sendMessage 'notify', { 'title': achievementData.title, 'text': achievementData.description, 'type': 'success' }
 			
-			
-		# TODO server-side, etc.
 
 	isAchievementUnlocked: (achievement) ->
 		return @unlockedAchievements[achievement]
 
 	resize: ->
+		if window.app
+			window.app.resize()
 		###
 		$('#content').css {
 			'position': 'relative'
@@ -174,38 +199,37 @@ class BMPHexEditor
 	
 	encodeDataURI: (input) ->
 		keyString = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
-		
-		output = ""
-		encodedCharIndexes = new Array( 4 )
-		inx = 0
-		paddingBytes = 0
-		
-		while inx < input.length
-			bytebuffer = new Array( 3 )
+		len = input.length
+		i = 0
+		out = ""
+
+		while i < len
 			
-			for jnx in [0...bytebuffer.length]
-				if inx < input.length
-					bytebuffer[jnx] = input[inx++] & 0xff
-				else
-					bytebuffer[jnx] = 0
-		
-			encodedCharIndexes[0] = bytebuffer[0] >> 2
-			encodedCharIndexes[1] = ((bytebuffer[0] & 0x3) << 4) | (bytebuffer[1] >> 4)
-			encodedCharIndexes[2] = ((bytebuffer[1] & 0x0f) << 2) | (bytebuffer[2] >> 6)
-			encodedCharIndexes[3] = bytebuffer[2] & 0x3f
-			
-			paddingBytes = inx - (input.length - 1)
-			
-			switch paddingBytes
-				when 2
-					encodedCharIndexes[3] = 64
-					encodedCharIndexes[2] = 64
-				when 1 
-					encodedCharIndexes[3] = 64
-				
-			for jnx in [0...encodedCharIndexes.length]
-				output += keyString.charAt encodedCharIndexes[jnx]
-		return output
+			c1 = input[i++] & 0xff
+
+			if i is len
+				out += keyString.charAt (c1 >> 2)
+				out += keyString.charAt ((c1 & 0x3) << 4)
+				out += '=='
+				break
+
+			c2 = input[i++]
+
+			if i is len
+				out += keyString.charAt (c1 >> 2)
+				out += keyString.charAt (((c1 & 0x3)<< 4) | ((c2 & 0xF0) >> 4))
+				out += keyString.charAt ((c2 & 0xF) << 2)
+				out += "="
+				break
+
+			c3 = input[i++]
+
+			out += keyString.charAt (c1 >> 2)
+			out += keyString.charAt (((c1 & 0x3)<< 4) | ((c2 & 0xF0) >> 4))
+			out += keyString.charAt (((c2 & 0xF) << 2) | ((c3 & 0xC0) >>6))
+			out += keyString.charAt (c3 & 0x3F)
+
+		return out
 	
 	handleDrop: (event) ->
 		event.preventDefault( )
@@ -228,7 +252,7 @@ class BMPHexEditor
 				if image.width <= BMPHexEditor.MAX_DIMENSION and image.height <= BMPHexEditor.MAX_DIMENSION
 					@updateWithImage image
 				else
-					alert 'Image is too large for this activity (' + BMPHexEditor.MAX_DIMENSION + ' x ' + BMPHexEditor.MAX_DIMENSION + 'px maximum)'
+					alert 'Image is too large for this activity (' + BMPHexEditor.MAX_DIMENSION + 'px x ' + BMPHexEditor.MAX_DIMENSION + 'px maximum)'
 			
 			image.src = readerEvent.target.result
 
@@ -272,6 +296,13 @@ class BMPHexEditor
 		@redraw( )
 	
 	redraw: ->
+		bytes = @getBytes( )
+		@base64Data = @encodeDataURI (@hexArrayToDec bytes)
+		#console.log bytes
+
+		$('#download-link').attr 'href', ('data:image/bmp;base64,' + @base64Data)
+		$('#preview-img').attr 'src', ('data:image/bmp;base64,' + @base64Data)
+
 		# how big are pixels going to be drawn
 		widthPixelSize  = Math.floor (BMPHexEditor.MAX_SIZE / @width)
 		heightPixelSize = Math.floor (BMPHexEditor.MAX_SIZE / @height)
@@ -303,8 +334,7 @@ class BMPHexEditor
 					@ctx.lineWidth = 2
 					@ctx.strokeRect x * pixelSize+1, y * pixelSize+1, pixelSize-2, pixelSize-2
 	
-	hexArrayToDec: (bytes) ->
-		return bytes.map (x) -> parseInt x, BMPHexEditor.HEX
+	hexArrayToDec: (bytes) -> parseInt(byte, BMPHexEditor.HEX) for byte in bytes
 	
 	editedPadding: ->
 		if @isAchievementUnlocked 'Show Pixel Array'
@@ -355,7 +385,6 @@ class BMPHexEditor
 			$fileByteDisplay.append $byteField
 		
 		#console.log @hexArrayToDec( bytes )
-		$('#downloadLink').attr 'href', 'data:image/x-bmp;base64,' + @encodeDataURI( @hexArrayToDec( bytes ) )
 		
 		$('.bmpHeaderByte').click => @unlockAchievement 'Show BMP Header'
 		
@@ -463,45 +492,56 @@ class BMPHexEditor
 		
 		@rebuildPixelArrayInput( )
 		@rebuildFileDisplay( )
+		@resize( )
 		
 	rebuildPixelArrayInput: ->
 		$pixelArray = $('#pixelArrayData')
 		$pixelArray.empty( )
 		
+		pixelNum = 0
 		for i in [0...@getPixelArrayLength( )]
 			value = @getBMPByteFromPixels i
 			$input = $( '<input id="byte' + (@headerLength + i) + '" class="pixelInput" maxlength="2">' )
 			$input.data { 'byte': (@headerLength + i) }
 			
 			col = i % @getRowLength( )
-			
 			if col >= @width * BMPHexEditor.BYTES_PER_PIXEL
 				$input.css {
 					'border': '1px solid #aaa'
 					'margin-right': '2px'
 				}
-			else if col % BMPHexEditor.BYTES_PER_PIXEL == 0
-				$input.css {
-					'border': '1px solid #bbe'
-					'margin-right': '2px'
-					'background-color': '#eef'
-				}
-			else if col % BMPHexEditor.BYTES_PER_PIXEL == 1
-				$input.css {
-					'border': '1px solid #beb'
-					'margin-right': '2px'
-					'background-color': '#efe'
-				}
-			else if col % BMPHexEditor.BYTES_PER_PIXEL == 2
-				$input.css {
-					'border': '1px solid #ebb'
-					'margin-right': '8px'
-					'background-color': '#fee'
-				}
+			else
+				if col % BMPHexEditor.BYTES_PER_PIXEL == 0
+					$input.css {
+						'border': '1px solid #bbe'
+						'margin-right': '2px'
+						'background-color': '#eef'
+					}
+
+					if pixelNum % @width == 0
+						$pixelArray.append '<br>'
+
+				else if col % BMPHexEditor.BYTES_PER_PIXEL == 1
+					$input.css {
+						'border': '1px solid #beb'
+						'margin-right': '2px'
+						'background-color': '#efe'
+					}
+				else if col % BMPHexEditor.BYTES_PER_PIXEL == 2
+					$input.css {
+						'border': '1px solid #ebb'
+						'margin-right': '8px'
+						'background-color': '#fee'
+					}
+
+					pixelNum += 1
+
+				
 			
 			byteValue = @paddedHex value
 			$input.val byteValue
 			$pixelArray.append $input
+
 		
 		
 		# update pixels on changing pixel inputs
@@ -533,11 +573,25 @@ class BMPHexEditor
 		
 		
 		paddingPerRow = @getRowLength( ) - @width * BMPHexEditor.BYTES_PER_PIXEL
-		$pixelArray.width( @width * 102 + 32 * paddingPerRow )
-			
-	resetImage: ->
+
+	getDimensions: ->
 		width  = @get4ByteVal BMPHexEditor.WIDTH_BYTES
 		height = @get4ByteVal BMPHexEditor.HEIGHT_BYTES
+		return {
+			width: width
+			height: height
+		}
+
+	resetImage: (pixels, width, height) ->
+		if width?
+			@set4ByteVal BMPHexEditor.WIDTH_BYTES, width
+		else
+			width  = @get4ByteVal BMPHexEditor.WIDTH_BYTES
+
+		if height?
+			@set4ByteVal BMPHexEditor.HEIGHT_BYTES, height
+		else
+			height = @get4ByteVal BMPHexEditor.HEIGHT_BYTES
 		
 		if width > BMPHexEditor.MAX_DIMENSION or height > BMPHexEditor.MAX_DIMENSION
 			@set4ByteVal BMPHexEditor.WIDTH_BYTES, @width
@@ -549,10 +603,13 @@ class BMPHexEditor
 		@width  = width
 		@height = height
 		@pixels = []
-		
-		# init with white
+
+		# init with white or pixels
 		for i in [0...(@width*@height*4)]
-			@pixels.push 255
+			if pixels
+				@pixels.push pixels[i]
+			else
+				@pixels.push 255
 		
 		@rebuild( )
 		@redraw( )
@@ -560,6 +617,9 @@ class BMPHexEditor
 		
 	set4ByteVal: (bytes, value) ->
 		value = parseInt value
+		if isNaN value
+			value = 0
+		
 		$('#byte' + bytes[0]).val @paddedHex(value & 0xff)
 		$('#byte' + bytes[1]).val @paddedHex((value >> 8) & 0xff)
 		$('#byte' + bytes[2]).val @paddedHex((value >> 16) & 0xff)

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>BMP Hex Editor</title>
+		<link rel="stylesheet" href="/common/bootstrap/css/bootstrap.min.css" type="text/css" media="screen" charset="utf-8">
+		
+		<script src="/common/jquery.min.js"></script>
+		<script src="/common/bootstrap/js/bootstrap.min.js"></script>
+		<script src="/app.js"></script>
+		<script type="text/javascript" charset="utf-8" src="{{ media('hexEditor.js') }}"></script>
+		
+		<style type="text/css" media="screen">
+			.faded {
+				/* IE 8 */
+				-ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)";
+
+				/* IE 5-7 */
+				filter: alpha(opacity=50);
+
+				/* Netscape */
+				-moz-opacity: 0.5;
+
+				/* Safari 1.x */
+				-khtml-opacity: 0.5;
+
+				/* Good browsers */
+				opacity: 0.5;
+			}
+		
+			.headerInput {
+				width: 20px;
+			}
+			
+			.pixelInput {
+				width: 25px;
+				-webkit-border-radius: 3px;
+				-moz-border-radius: 3px;
+				border-radius: 3px;
+				margin-bottom: 1px;
+				text-align: center;
+			}
+
+			.headerInput:hover {
+				background-color: #ff8 !important;
+				color: #000 !important;
+			}
+
+			.pixelInput:hover {
+				background-color: #ff8 !important;
+				color: #000 !important;
+			}
+			
+			.highlighted {
+				background-color: #ff8 !important;
+				color: #000 !important;
+			}
+			
+			.listedAchievement {
+				margin-left: 5px;
+				font-size: 12px;
+				cursor: pointer;
+			}
+			
+			.hexConst {
+				display: inline-block;
+				width: 20px;
+				padding: 4px;
+				margin: 1px;
+			}
+			
+			
+			.bmpHeaderByteUnlocked {
+				color: #00b;
+			}
+			
+			.dibHeaderByteUnlocked {
+				color: #080;
+			}
+			
+			.bmpHeaderByte {
+				text-decoration: none;
+			}
+			
+			.dibHeaderByte {
+				text-decoration: none;
+			}
+			
+			.pixelByte {
+				color: #800;
+				text-decoration: none;
+			}
+
+			.displayByte {
+				font-size: 12px;
+				display: inline-block;
+				width: 16px;
+				margin: 0;
+				padding: 0;
+				border: none !important;
+				text-align: center !important;
+				vertical-align: middle !important;
+				font-family: monospace;
+				line-height: 18px;
+				margin-left: 1px;
+				padding-left: 2px;
+				margin-right: 1px;
+				padding-right: 1px;
+				cursor: default;	
+			}
+
+			.displayByte:hover {
+				background-color: #ff8 !important;
+				color: #000 !important;
+			}
+
+			input.displayByte {
+				border: 1px solid #555;
+				cursor: text !important;
+			}
+			
+			#header {
+				background: -moz-linear-gradient(top,  rgba(255,255,255,1) 0%, rgba(255,255,255,1) 95%, rgba(255,255,255,0) 100%); /* FF3.6+ */
+				background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,255,255,1)), color-stop(95%,rgba(255,255,255,1)), color-stop(100%,rgba(255,255,255,0))); /* Chrome,Safari4+ */
+				background: -webkit-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(255,255,255,1) 95%,rgba(255,255,255,0) 100%); /* Chrome10+,Safari5.1+ */
+				background: -o-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(255,255,255,1) 95%,rgba(255,255,255,0) 100%); /* Opera 11.10+ */
+				background: -ms-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(255,255,255,1) 95%,rgba(255,255,255,0) 100%); /* IE10+ */
+				background: linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(255,255,255,1) 95%,rgba(255,255,255,0) 100%); /* W3C */
+				filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#00ffffff',GradientType=0 ); /* IE6-9 */
+
+			}
+
+			#fileView {
+				background-color: #e0e0e0;
+			}
+			
+		</style>
+	</head>
+		
+	<body>
+		<div id="header" style="width: 100%; z-index: 998">			
+			<ul class="nav nav-pills hide" style="position: absolute; left: 15px;" id="achievementDropdown">
+				<li class="dropdown" id="achievementMenu">
+					<a class="dropdown-toggle" data-toggle="dropdown" href="#achievementMenu">
+						<span class="badge badge-success"><span id="numUnlocked">0</span><!--/<span id="totalAchievements">10</span>--></span>
+						<b class="caret"></b>
+					</a>
+					<ul class="dropdown-menu" id="achievementList">
+						<li><a href="?" id="resetAchievements">Reset</a></li>
+						<li class="divider"></li>
+					</ul>
+				</li>
+			</ul>
+			
+			<center>
+				<div id="achievementSpace" style="height: 60px; z-index: 9999; cursor: pointer">
+				</div>
+				
+				<div id="dropZone" style="border: 1px dashed #ccc; display: inline-block; padding: 5px; background-color: #fcfcfc;">
+					<div style="float: left; padding-top: 20px">
+						Bitmap Preview:<br/>
+						<canvas id="bitmapCanvas" style="border: 1px solid #aaa"></canvas><br/>
+						<img src="data:image/bmp;base64,Qk1aAAAAAAAAADYAAAAoAAAAAwAAAAMAAAABABgAAAAAACQAAAATCwAAEwsAAAAAAAAAAAAA////////////AAAA////////////AAAA////////////AAA=" id="preview-img" style="border: 1px solid #444; min-height: 16px; width: auto; max-width: 80px"> 
+						<a href="#" id="download-link" target="_blank" class="btn btn-mini"><i style="margin-top: -1px" class="icon-download"></i> Download</a>
+					</div>
+					<div style="width: 700px; padding-left: 180px; text-align: left">
+						File bytes (white boxes are editable):
+						<span style="float:right">
+							Legend:
+							<a href="#" style="font-family: monospace;" id="bmpHeaderUnlock" class="bmpHeaderByte" title="Click to Reveal BMP Header Information">BMP Header</a>,
+							<span style="font-family: monospace;" id="dibHeaderUnlock" class="dibHeaderByte">DIB Header</span>,
+							<span style="font-family: monospace;" id="pixelArrayUnlock" class="pixelByte">Pixel Array</span>
+						</span>
+						<pre id="fileView" style="font-family: monospace; text-align: left"></pre>
+					</div>
+					<br/>
+					<span style="color: #888"><i class="icon-edit faded"></i> Edit the bytes, <i class="icon-arrow-down faded"></i> Drop an image here or </span><a href="" onclick="$('#selectImage').fadeToggle(); return false;"><i class="icon-picture faded"></i> Select an image file</a><br/><div style="height: 35px"><input type="file" id="selectImage" style="display:none; border: 1px solid #ccc; padding: 4px; background-color: #eee"></div>
+					<br/>
+					<div style="text-align: center">
+						<a href="#" id="save-button" class="btn btn-success" data-loading-text="Saving..." data-complete-text="Saved!">Save/Submit</a>
+					</div>
+				</div>
+			</center>
+			<br/>
+			
+			<br/>
+			
+			<ul class="nav nav-tabs">
+				<li id="bmpHeaderTab" class="active hide"><a href="#bmpHeader" data-toggle="tab">BMP Header</a></li>
+				<li id="dibHeaderTab" class="hide"><a href="#dibHeader" data-toggle="tab">DIB Header</a></li>
+				<li id="pixelArrayTab" class="hide"><a href="#pixelArray" data-toggle="tab">Pixel Array</a></li>
+			</ul>
+		</div>
+		<div style="height: 300px; overflow: scroll; border: 1px solid #eee">
+			<div id="content" class="tab-content hide" style="padding-left: 1ex;">
+				<div class="tab-pane active" id="bmpHeader">
+					<p>
+						<b>Start of File</b>
+					</p>
+					<table border="0" cellspacing="0" cellpadding="0" class="table table-striped">
+						<tr>
+							<th>Offset</th>
+							<th>Size</th>
+							<th>Hex Value
+								<sub>
+									<br/>
+									(Bold values change according to size)
+								</sub>
+							</th>
+							<th>Value</th>
+							<th>Description</th>
+						</tr>
+						<tr>
+							<td>0x00</td>
+							<td>2</td>
+							<td>
+								<span class="hexConst" id="byte0">42</span>
+								<span class="hexConst" id="byte1">4D</span>
+							</td>
+							<td>"BM"</td>
+							<td>Format ID</td>
+						</tr>
+						<tr>
+							<td>0x02</td>
+							<td>4</td>
+							<td style="font-weight: bold">
+								<span class="hexConst" id="byte2">46</span>
+								<span class="hexConst" id="byte3">00</span>
+								<span class="hexConst" id="byte4">00</span>
+								<span class="hexConst" id="byte5">00</span>
+							</td>
+							<td>
+								<span id="fileSize">XX</span> Bytes
+							</td>
+							<td>
+								File size (bytes) of the BMP
+							</td>
+						</tr>
+						<tr>
+							<td>0x06</td>
+							<td>4</td>
+							<td>
+								<span class="hexConst" id="byte6">00</span>
+								<span class="hexConst" id="byte7">00</span>
+								<span class="hexConst" id="byte8">00</span>
+								<span class="hexConst" id="byte9">00</span>
+							</td>
+							<td>Unused</td>
+							<td>Application Specific</td>
+						</tr>
+						<tr>
+							<td>0x0A</td>
+							<td>4</td>
+							<td>
+								<span class="hexConst" id="byte10">36</span>
+								<span class="hexConst" id="byte11">00</span>
+								<span class="hexConst" id="byte12">00</span>
+								<span class="hexConst" id="byte13">00</span>
+							</td>
+							<td>54 Bytes</td>
+							<td>Position in the file where the pixel data starts</td>
+						</tr>
+					</table>
+					<p>
+						<b>DIB header follows</b>
+					</p>
+				</div>
+				<div class="tab-pane hide" id="dibHeader">
+					<p>
+						<b>Following on from BMP header</b>
+					</p>
+					<table border="0" cellspacing="0" cellpadding="0" class="table table-striped">
+						<tr>
+							<th>Offset</th>
+							<th>Size</th>
+							<th>Hex Value
+								<sub>
+									<br/>
+									(Bold values change according to size)
+								</sub>
+							</th>
+							<th>Value</th>
+							<th>Description</th>
+						</tr>
+						<tr>
+							<td>0x0E</td>
+							<td>4</td>
+							<td>
+								<span class="hexConst" id="byte14">28</span>
+								<span class="hexConst" id="byte15">00</span>
+								<span class="hexConst" id="byte16">00</span>
+								<span class="hexConst" id="byte17">00</span>
+							</td>
+							<td>40 Bytes</td>
+							<td>Size of DIB header</td>
+						</tr>
+						<tr>
+							<td>0x12</td>
+							<td>4</td>
+							<td>
+								<input maxlength="2" type="text" class="headerInput" id="byte18" value="03">
+								<input maxlength="2" type="text" class="headerInput" id="byte19" value="00">
+								<input maxlength="2" type="text" class="headerInput" id="byte20"value="00">
+								<input maxlength="2" type="text" class="headerInput" id="byte21"value="00">
+							</td>
+							<td>
+								<span id="imageWidth">XX</span> Pixels
+							</td>
+							<td>
+								Image width (in pixels)
+								<sub><br>Changing this field will reset the image</sub>
+							</td>
+						</tr>
+						<tr>
+							<td>0x16</td>
+							<td>4</td>
+							<td>
+								<input maxlength="2" type="text" class="headerInput" id="byte22" value="03">
+								<input maxlength="2" type="text" class="headerInput" id="byte23" value="00">
+								<input maxlength="2" type="text" class="headerInput" id="byte24" value="00">
+								<input maxlength="2" type="text" class="headerInput" id="byte25" value="00">
+							</td>
+							<td>
+								<span id="imageHeight">XX</span> Pixels
+							</td>
+							<td>
+								Image height (in pixels)
+								<sub><br>Changing this field will reset the image</sub>
+							</td>
+						</tr>
+						<tr>
+							<td>0x1A</td>
+							<td>2</td>
+							<td>
+								<span class="hexConst" id="byte26">01</span>
+								<span class="hexConst" id="byte27">00</span>
+							</td>
+							<td>1 Plane</td>
+							<td>Number of color planes used in the image</td>
+						</tr>
+						<tr>
+							<td>0x1C</td>
+							<td>2</td>
+							<td>
+								<span class="hexConst" id="byte28">18</span>
+								<span class="hexConst" id="byte29">00</span>
+							</td>
+							<td>24 bits</td>
+							<td>Number of bits per pixel (3 &times; 8-bit colors)</td>
+						</tr>
+						<tr>
+							<td>0x1E</td>
+							<td>4</td>
+							<td>
+								<span class="hexConst" id="byte30">00</span>
+								<span class="hexConst" id="byte31">00</span>
+								<span class="hexConst" id="byte32">00</span>
+								<span class="hexConst" id="byte33">00</span>
+							</td>
+							<td>0</td>
+							<td>Compression used (none)</td>
+						</tr>
+						<tr>
+							<td>0x22</td>
+							<td>4</td>
+							<td style="font-weight: bold">
+								<span class="hexConst" id="byte34">10</span>
+								<span class="hexConst" id="byte35">00</span>
+								<span class="hexConst" id="byte36">00</span>
+								<span class="hexConst" id="byte37">00</span>
+							</td>
+							<td>
+								<span id="pixelArraySize">XX</span> Bytes
+							</td>
+							<td>
+								Size of the pixel array data (including padding)
+							</td>
+						</tr>
+						<tr>
+							<td>0x26</td>
+							<td>4</td>
+							<td>
+								<span class="hexConst" id="byte38">13</span>
+								<span class="hexConst" id="byte39">0B</span>
+								<span class="hexConst" id="byte40">00</span>
+								<span class="hexConst" id="byte41">00</span>
+							</td>
+							<td>2835 pixels/meter</td>
+							<td>Horizontal Resolution</td>
+						</tr>
+						<tr>
+							<td>0x2A</td>
+							<td>4</td>
+							<td>
+								<span class="hexConst" id="byte42">13</span>
+								<span class="hexConst" id="byte43">0B</span>
+								<span class="hexConst" id="byte44">00</span>
+								<span class="hexConst" id="byte45">00</span>
+							</td>
+							<td>2835 pixels/meter</td>
+							<td>Vertical Resolution</td>
+						</tr>	
+						<tr>
+							<td>0x2E</td>
+							<td>4</td>
+							<td>
+								<span class="hexConst" id="byte46">00</span> 
+								<span class="hexConst" id="byte47">00</span>
+								<span class="hexConst" id="byte48">00</span>
+								<span class="hexConst" id="byte49">00</span>
+							</td>
+							<td>0 (Unused)</td>
+							<td>Number of colors in the palette</td>
+						</tr>
+						<tr>
+							<td>0x32</td>
+							<td>4</td>
+							<td><span class="hexConst" id="byte50">00</span>
+								<span class="hexConst" id="byte51">00</span>
+								<span class="hexConst" id="byte52">00</span>
+								<span class="hexConst" id="byte53">00</span>
+							</td>
+							<td>0 (All colors are important)</td>
+							<td>Number of important colors</td>
+						</tr>		
+					</table>
+					<p>
+						<b>Pixel array follows</b>
+					</p>
+				</div>
+				<div class="tab-pane hide" id="pixelArray">
+					<p>
+						<b>Following on from DIB header</b>
+					</p>
+					
+					<div id="pixelArrayData" style="display: inline-block">Loading...</div>
+					<p>
+						<br/>
+						<b>End of File</b>
+					</p>
+				</div>
+			</div>
+		</div>
+
+		<script type="text/javascript" charset="utf-8">
+			var bmpHexEditor;
+			window.app.ready( function( ) {
+				window.app.resize( 970, 720 );
+			} );
+			
+			$(document).ready( function( ) {
+				$.ajax({
+					url: './getSubmission',
+					dataType: 'json',
+					success: function( data ) {
+						if (data.width && data.height) {
+							bmpHexEditor = new BMPHexEditor( data.width, data.height, data.achievements, data.pixels );
+						} else {
+							bmpHexEditor = new BMPHexEditor( 3, 3 );
+						}
+					}
+				});
+
+				$('#save-button').click( function() {
+					var saveData;
+					var dimensions;
+
+					dimensions = bmpHexEditor.getDimensions();
+
+					saveData = {
+						hex: bmpHexEditor.getBytes(),
+						pixels: bmpHexEditor.pixels,
+						base64: bmpHexEditor.base64Data,
+						previewBase64: bmpHexEditor.canvas.toDataURL('image/png').replace('data:image/png;base64,','')
+						achievements: bmpHexEditor.unlockedAchievements,
+						width: dimensions.width,
+						height: dimensions.height
+					};
+					
+					$(this).button('loading');
+					console.log( saveData );
+
+					$.ajax({
+						url: './saveSubmission',
+						type: 'POST',
+						data: {
+							submission: JSON.stringify(saveData)
+						},
+						dataType: 'json',
+						success: function( data ) {
+							console.log(data);
+							$('#save-button').button('complete');
+							setTimeout( function() { $('#save-button').button('reset') }, 1500 );
+						}
+					});
+					return false;
+				});
+			} );
+		</script>
+	</body>
+</html>

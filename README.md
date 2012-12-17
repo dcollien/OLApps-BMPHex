@@ -13,3 +13,11 @@ src
   workerScripts
 
 media
+
+
+TODO:
+ - Persistent achievements
+ - download BMP
+ - Submission
+
+

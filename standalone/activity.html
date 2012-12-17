@@ -2,12 +2,11 @@
 <html lang="en">
 	<head>
 		<title>BMP Hex Editor</title>
-		<link rel="stylesheet" href="/common/bootstrap/css/bootstrap.min.css" type="text/css" media="screen" charset="utf-8">
+		<link rel="stylesheet" href="./bootstrap/css/bootstrap.min.css" type="text/css" media="screen" charset="utf-8">
 		
-		<script src="/common/jquery.min.js"></script>
-		<script src="/common/bootstrap/js/bootstrap.min.js"></script>
-		<script src="/app.js"></script>
-		<script type="text/javascript" charset="utf-8" src="{{ media('hexEditor.js') }}"></script>
+		<script src="./jquery.min.js"></script>
+		<script src="./bootstrap/js/bootstrap.min.js"></script>
+		<script type="text/javascript" charset="utf-8" src="../media/hexEditor.js"></script>
 		
 		<style type="text/css" media="screen">
 			.faded {
@@ -32,7 +31,12 @@
 			}
 			
 			.pixelInput {
-				width: 20px;
+				width: 25px;
+				-webkit-border-radius: 3px;
+				-moz-border-radius: 3px;
+				border-radius: 3px;
+				margin-bottom: 1px;
+				text-align: center;
 			}
 			
 			.highlighted {
@@ -44,6 +48,7 @@
 			.listedAchievement {
 				margin-left: 5px;
 				font-size: 12px;
+				cursor: pointer;
 			}
 			
 			.hexConst {
@@ -109,19 +114,23 @@
 			$(document).ready( function( ) {
 				// init with 3x3 image
 				var bmpHexEditor = new BMPHexEditor( 3, 3 );
+
+				/*
 				window.app.ready( function( ) {
 					window.app.resize( 970, 768 );
 				} );
+				*/
+				$('#bmpHeaderUnlock').tooltip();
 			} );
 		</script>
 	</head>
 		
 	<body>
 		<div id="header" style="width: 100%; z-index: 998">			
-			<ul class="nav nav-pills hide" style="position: absolute; right: 15px;" id="achievementDropdown">
+			<ul class="nav nav-pills hide" style="position: absolute; left: 15px;" id="achievementDropdown">
 				<li class="dropdown" id="achievementMenu">
 					<a class="dropdown-toggle" data-toggle="dropdown" href="#achievementMenu">
-						Achievements <span class="badge badge-success"><span id="numUnlocked">0</span><!--/<span id="totalAchievements">10</span>--></span>
+						<span class="badge badge-success"><span id="numUnlocked">0</span><!--/<span id="totalAchievements">10</span>--></span>
 						<b class="caret"></b>
 					</a>
 					<ul class="dropdown-menu" id="achievementList">
@@ -138,13 +147,17 @@
 				<div id="dropZone" style="border: 1px dashed #ccc; display: inline-block; padding: 5px; background-color: #fcfcfc;">
 					<div style="float: left; padding-top: 20px">
 						Bitmap Preview:<br/>
-						<canvas id="bitmapCanvas" style="border: 1px solid #aaa"></canvas>
+						<canvas id="bitmapCanvas" style="border: 1px solid #aaa"></canvas><br/>
+						<form method="POST" action="./image" target="_blank">
+							<input type="hidden" name="bmpHex" id="bmpHex" value="">
+							<button type="submit" class="btn btn-mini"><i style="margin-top: -1px" class="icon-download"></i> Download</button>
+						</form>
 					</div>
 					<div style="width: 700px; padding-left: 180px; text-align: left">
 						File bytes in hexadecimal:
 						<span style="float:right">
 							Legend:
-							<a href="#" style="font-family: monospace;" id="bmpHeaderUnlock" class="bmpHeaderByte">BMP Header</a>,
+							<a href="#" style="font-family: monospace;" id="bmpHeaderUnlock" class="bmpHeaderByte" title="Click to Reveal BMP Header Information">BMP Header</a>,
 							<span style="font-family: monospace;" id="dibHeaderUnlock" class="dibHeaderByte">DIB Header</span>,
 							<span style="font-family: monospace;" id="pixelArrayUnlock" class="pixelByte">Pixel Array</span>
 						</span>
@@ -406,10 +419,10 @@
 					<p>
 						<b>Following on from DIB header</b>
 					</p>
-				
+					
 					<div id="pixelArrayData" style="display: inline-block">Loading...</div>
-				
 					<p>
+						<br/>
 						<b>End of File</b>
 					</p>
 				</div>
